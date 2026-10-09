@@ -40,3 +40,18 @@ ${k==='workers'?`<button class="btn" data-a="p" data-k="${k}" data-id="${x.id}" 
  main.onclick=async e=>{const b=e.target.dataset;if(!b.a)return;if(b.a==='d'&&!confirm('Futa kabisa?'))return;
   await api(`/api/admin/${b.k}/${b.id}`,b.a==='d'?{method:'DELETE'}:{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({field:b.f,value:+b.v})});admin()}}
 go('worker');window.scrollTo(0,0);
+/* --- AKAUNTI NA KUINGIA --- */
+(function(){
+const pw='<label>Nywila ya akaunti (angalau herufi 6)</label><input name="password" type="password" minlength="6" required>';
+const fix=()=>{const c=document.querySelector('#f input[name=consent]');
+ if(c&&!document.querySelector('#f input[name=password]'))c.closest('label').insertAdjacentHTML('beforebegin',pw)};
+fix();new MutationObserver(fix).observe(main,{childList:true,subtree:true});
+document.querySelector('footer').insertAdjacentHTML('afterbegin','<button id="lg" class="lnk">Ingia</button> ');
+$('#lg').onclick=()=>login();
+})();
+function login(){main.innerHTML=`<form id="f"><h3>Ingia</h3><label>Namba ya simu</label><input name="phone" type="tel" required><label>Nywila</label><input name="password" type="password" required><button class="btn">Ingia</button><div id="o"></div></form>`;
+ $('#f').onsubmit=async e=>{e.preventDefault();try{await api('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.fromEntries(new FormData(e.target)))});account()}catch(x){$('#o').innerHTML=msg(x.message)}}}
+async function account(){try{const m=await api('/api/me');
+ const st=m.role==='worker'?(m.approved?'Umeidhinishwa, unaonekana kwenye orodha.':'Unasubiri idhini ya admin.'):'Ombi lako limepokelewa, admin atawasiliana nawe.';
+ main.innerHTML=`<div class="card"><h3>Karibu, ${esc(m.name)}</h3><p>${m.role==='worker'?'Mfanyakazi':'Mwajiri'} · ${esc(m.phone)}</p><p>${m.found?'Umepata muunganisho.':st}</p><button class="btn grey" id="out">Toka</button></div>`;
+ $('#out').onclick=async()=>{await api('/api/logout',{method:'POST'});login()}}catch{login()}}
