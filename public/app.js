@@ -55,3 +55,9 @@ async function account(){try{const m=await api('/api/me');
  const st=m.role==='worker'?(m.approved?'Umeidhinishwa, unaonekana kwenye orodha.':'Unasubiri idhini ya admin.'):'Ombi lako limepokelewa, admin atawasiliana nawe.';
  main.innerHTML=`<div class="card"><h3>Karibu, ${esc(m.name)}</h3><p>${m.role==='worker'?'Mfanyakazi':'Mwajiri'} · ${esc(m.phone)}</p><p>${m.found?'Umepata muunganisho.':st}</p><button class="btn grey" id="out">Toka</button></div>`;
  $('#out').onclick=async()=>{await api('/api/logout',{method:'POST'});login()}}catch{login()}}
+/* --- NIDA SI LAZIMA --- */
+(function(){
+const fixN=()=>{const n=document.querySelector('#f input[name=nida]');
+ if(n&&n.required){n.required=false;const l=n.previousElementSibling;if(l)l.textContent='Namba ya NIDA (si lazima)'}};
+fixN();new MutationObserver(fixN).observe(main,{childList:true,subtree:true});
+})();
