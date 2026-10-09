@@ -61,3 +61,5 @@ const fixN=()=>{const n=document.querySelector('#f input[name=nida]');
  if(n&&n.required){n.required=false;const l=n.previousElementSibling;if(l)l.textContent='Namba ya NIDA (si lazima)'}};
 fixN();new MutationObserver(fixN).observe(main,{childList:true,subtree:true});
 })();
+/* --- KITUFE CHA KUPIGA SIMU --- */
+if(!document.querySelector('.tel'))document.body.insertAdjacentHTML('beforeend','<a class="wa tel" href="tel:+255683560657">📞 Piga simu</a>');
