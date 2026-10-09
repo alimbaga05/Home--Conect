@@ -92,9 +92,9 @@ app.use(express.json({ limit: '10kb' }));
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 6e6, files: 2 } });
 
 // ---- umma ----
-app.post('/api/workers', limit(15, 36e5), upload.fields([{ name: 'photo', maxCount: 1 }, { name: 'clearance', maxCount: 1 }]), (req, res) => {
+app.post('/api/workers', limit(15, 36e5), upload.fields([{ name: 'photo', maxCount: 1 }]), (req, res) => {
   const b = req.body, nida = str(b.nida, 40).replace(/\D/g, ''), age = parseInt(b.age, 10), exp = parseInt(b.exp, 10);
-  const clr = req.files?.clearance?.[0], pic = req.files?.photo?.[0], jobs = jobsOf(b.jobs);
+  const pic = req.files?.photo?.[0], jobs = jobsOf(b.jobs);
   if (b.consent !== 'on') return res.status(400).json({ error: 'Kubali matumizi ya taarifa zako.', code: 'consent' });
   if (!str(b.name, 80) || !str(b.phone, 20) || !str(b.origin, 80) || !(age >= 18 && age <= 70) || !(exp >= 0 && exp <= 50) || !jobs.length)
     return res.status(400).json({ error: 'Jaza taarifa zote muhimu kwa usahihi.', code: 'fields' });
@@ -103,7 +103,7 @@ app.post('/api/workers', limit(15, 36e5), upload.fields([{ name: 'photo', maxCou
   { const pe = pwBad(b); if (pe) return res.status(400).json({ error: pe, code: 'acct' }); }
   db.prepare(`INSERT INTO workers(name,phone,age,gender,origin,exp,educ,jobs,notes,nida,photo,clearance,created) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`)
     .run(str(b.name, 80), str(b.phone, 20), age, str(b.gender, 12), str(b.origin, 80), exp, str(b.educ, 40), JSON.stringify(jobs),
-      str(b.notes, 500), encText(nida), pic ? save(pic.buffer, false) : null, save(clr.buffer, true), new Date().toISOString());
+      str(b.notes, 500), encText(nida), pic ? save(pic.buffer, false) : null, null, new Date().toISOString());
   mkAcct('worker', b);
   notifyAdmin(`Mfanyakazi mpya: ${str(b.name, 80)}, simu ${str(b.phone, 20)}. Fungua Admin kuidhinisha.`);
   res.json({ ok: true });
