@@ -65,3 +65,7 @@ fixN();new MutationObserver(fixN).observe(main,{childList:true,subtree:true});
 if(!document.querySelector('.tel'))document.body.insertAdjacentHTML('beforeend','<a class="wa tel" href="tel:+255683560657">📞 Piga simu</a>');
 /* --- KITUFE CHA KUPIGA SIMU --- */
 if(!document.querySelector('.tel'))document.body.insertAdjacentHTML('beforeend','<a class="wa tel" href="tel:+255683560657">📞 Piga simu</a>');
+
+/* --- KITUFE CHA KUPIGA SIMU (toleo imara) --- */
+document.querySelectorAll('.tel').forEach(e=>e.remove());
+document.body.insertAdjacentHTML('beforeend','<a href="tel:+255683560657" style="position:fixed;right:10px;bottom:78px;z-index:99;background:#1b7a5a;color:#fff;font-weight:700;font-size:16px;padding:12px 18px;border-radius:40px;text-decoration:none;box-shadow:0 3px 8px #0003">📞 Piga simu</a>');
