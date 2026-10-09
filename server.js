@@ -66,6 +66,20 @@ function notifyAdmin(text) {
     .catch(e => console.error('WhatsApp:', e.message));
 }
 
+db.exec(`CREATE TABLE IF NOT EXISTS accounts(id INTEGER PRIMARY KEY AUTOINCREMENT, phone TEXT UNIQUE, role TEXT, ref INTEGER, salt TEXT, hash TEXT);`);
+const normPhone = p => String(p || '').replace(/\D/g, '');
+const hashPw = (pw, salt) => crypto.scryptSync(pw, salt, 32).toString('hex');
+const pwBad = b => { if (normPhone(b.phone).length < 9) return 'Namba ya simu si sahihi.';
+  if (String(b.password || '').length < 6) return 'Nywila iwe na angalau herufi 6.';
+  if (db.prepare('SELECT 1 FROM accounts WHERE phone=?').get(normPhone(b.phone))) return 'Namba hii imeshasajiliwa. Tafadhali ingia.'; return null; };
+const mkAcct = (role, b) => { const salt = crypto.randomBytes(16).toString('hex');
+  db.prepare('INSERT INTO accounts(phone,role,ref,salt,hash) VALUES(?,?,?,?,?)').run(normPhone(b.phone), role, db.prepare('SELECT last_insert_rowid() id').get().id, salt, hashPw(String(b.password), salt)); };
+const userOf = req => { const [id, exp, sig] = (cookies(req).usr || '').split('.');
+  if (!id || !exp || !sig || sig.length !== 64 || Number(exp) < Date.now()) return null;
+  if (!crypto.timingSafeEqual(Buffer.from(sig), Buffer.from(sign('u' + id + '.' + exp)))) return null;
+  return db.prepare('SELECT * FROM accounts WHERE id=?').get(+id) || null; };
+const SEC = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+
 const app = express();
 app.set('trust proxy', 1);
 app.disable('x-powered-by');
@@ -84,12 +98,14 @@ app.post('/api/workers', limit(15, 36e5), upload.fields([{ name: 'photo', maxCou
   if (b.consent !== 'on') return res.status(400).json({ error: 'Kubali matumizi ya taarifa zako.', code: 'consent' });
   if (!str(b.name, 80) || !str(b.phone, 20) || !str(b.origin, 80) || !(age >= 18 && age <= 70) || !(exp >= 0 && exp <= 50) || !jobs.length)
     return res.status(400).json({ error: 'Jaza taarifa zote muhimu kwa usahihi.', code: 'fields' });
-  if (nida.length !== 20) return res.status(400).json({ error: 'Namba ya NIDA lazima iwe na tarakimu 20.', code: 'nida' });
+  if (nida && nida.length !== 20) return res.status(400).json({ error: 'Ukiweka NIDA, iwe na tarakimu 20.', code: 'nida' });
   if (!clr || !sniff(clr.buffer)) return res.status(400).json({ error: 'Pakia picha ya hati safi ya Polisi (JPG/PNG).', code: 'clearance' });
   if (pic && !sniff(pic.buffer)) return res.status(400).json({ error: 'Picha ya wasifu haikubaliki.', code: 'photo' });
+  { const pe = pwBad(b); if (pe) return res.status(400).json({ error: pe, code: 'acct' }); }
   db.prepare(`INSERT INTO workers(name,phone,age,gender,origin,exp,educ,jobs,notes,nida,photo,clearance,created) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`)
     .run(str(b.name, 80), str(b.phone, 20), age, str(b.gender, 12), str(b.origin, 80), exp, str(b.educ, 40), JSON.stringify(jobs),
       str(b.notes, 500), encText(nida), pic ? save(pic.buffer, false) : null, save(clr.buffer, true), new Date().toISOString());
+  mkAcct('worker', b);
   notifyAdmin(`Mfanyakazi mpya: ${str(b.name, 80)}, simu ${str(b.phone, 20)}. Fungua Admin kuidhinisha.`);
   res.json({ ok: true });
 });
@@ -98,9 +114,11 @@ app.post('/api/employers', limit(15, 36e5), (req, res) => {
   if (b.consent !== 'on') return res.status(400).json({ error: 'Kubali matumizi ya taarifa zako.', code: 'consent' });
   if (!str(b.name, 80) || !str(b.phone, 20) || !str(b.location, 120) || !str(b.need, 800))
     return res.status(400).json({ error: 'Jaza taarifa zote muhimu.', code: 'fields' });
-  if (nida.length !== 20) return res.status(400).json({ error: 'Namba ya NIDA lazima iwe na tarakimu 20.', code: 'nida' });
+  if (nida && nida.length !== 20) return res.status(400).json({ error: 'Ukiweka NIDA, iwe na tarakimu 20.', code: 'nida' });
+  { const pe = pwBad(b); if (pe) return res.status(400).json({ error: pe, code: 'acct' }); }
   db.prepare(`INSERT INTO employers(name,phone,location,nida,jobs,need,offer,created) VALUES(?,?,?,?,?,?,?,?)`)
     .run(str(b.name, 80), str(b.phone, 20), str(b.location, 120), encText(nida), JSON.stringify(jobsOf(b.jobs)), str(b.need, 800), str(b.offer, 12), new Date().toISOString());
+  mkAcct('employer', b);
   notifyAdmin(`Ombi jipya la mwajiri: ${str(b.name, 80)}, simu ${str(b.phone, 20)}, ${str(b.location, 60)}.`);
   res.json({ ok: true });
 });
@@ -114,6 +132,18 @@ app.get('/api/photo/:id', (req, res) => {
   res.type(EXT[path.extname(w.photo)] || 'image/jpeg').set('Cache-Control', 'private, max-age=300')
     .send(fs.readFileSync(path.join(FILES, path.basename(w.photo))));
 });
+
+app.post('/api/login', limit(10, 9e5), (req, res) => {
+  const a = db.prepare('SELECT * FROM accounts WHERE phone=?').get(normPhone(req.body.phone));
+  const ok = a && crypto.timingSafeEqual(Buffer.from(hashPw(String(req.body.password || ''), a.salt)), Buffer.from(a.hash));
+  if (!ok) return res.status(401).json({ error: 'Namba au nywila si sahihi', code: 'login' });
+  const exp = String(Date.now() + 30 * 864e5);
+  res.set('Set-Cookie', `usr=${a.id}.${exp}.${sign('u' + a.id + '.' + exp)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=2592000${SEC}`);
+  res.json({ ok: true }); });
+app.post('/api/logout', (req, res) => { res.set('Set-Cookie', 'usr=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0'); res.json({ ok: true }); });
+app.get('/api/me', (req, res) => { const a = userOf(req); if (!a) return res.status(401).json({ error: 'Hujaingia' });
+  const r = db.prepare(`SELECT * FROM ${a.role === 'worker' ? 'workers' : 'employers'} WHERE id=?`).get(a.ref) || {};
+  res.set('Cache-Control', 'no-store').json({ role: a.role, name: r.name, phone: r.phone, approved: !!r.approved, found: !!r.found, jobs: r.jobs ? JSON.parse(r.jobs) : [] }); });
 
 // ---- admin ----
 app.post('/api/admin/login', limit(8, 9e5), (req, res) => {
