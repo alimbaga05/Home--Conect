@@ -69,3 +69,13 @@ if(!document.querySelector('.tel'))document.body.insertAdjacentHTML('beforeend',
 /* --- KITUFE CHA KUPIGA SIMU (toleo imara) --- */
 document.querySelectorAll('.tel').forEach(e=>e.remove());
 document.body.insertAdjacentHTML('beforeend','<a href="tel:+255683560657" style="position:fixed;right:10px;bottom:78px;z-index:99;background:#1b7a5a;color:#fff;font-weight:700;font-size:16px;padding:12px 18px;border-radius:40px;text-decoration:none;box-shadow:0 3px 8px #0003">📞 Piga simu</a>');
+/* --- MAOMBI YA WAAJIRI (bila namba za simu) --- */
+(function(){
+$('#tf').insertAdjacentHTML('afterend','<button id="tr">Maombi ya waajiri</button>');
+$('#tr').onclick=async()=>{['tw','te','tf'].forEach(i=>$('#'+i).classList.remove('on'));$('#tr').classList.add('on');
+ main.innerHTML='<p>Inapakia...</p>';
+ try{const r=await api('/api/public/employers');
+  const w=typeof WA!=='undefined'?WA:'';
+  main.innerHTML=r.length?r.map(x=>`<div class="card"><b>${esc(x.name)}</b> · ${esc(x.location)}<br>${x.jobs.map(esc).join(', ')}<p>${esc(x.need)}</p>${x.offer?`<small>Mshahara: ${esc(x.offer)}</small><br>`:''}<a class="btn" target="_blank" rel="noopener" href="https://wa.me/${w}?text=${encodeURIComponent('Nina nia na ombi la mwajiri namba '+x.id)}">Nina nia</a></div>`).join(''):'<p>Hakuna maombi kwa sasa.</p>';
+ }catch(e){main.innerHTML=msg(e.message)}main.scrollIntoView({behavior:'smooth'})};
+})();
