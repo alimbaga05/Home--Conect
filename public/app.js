@@ -112,3 +112,7 @@ new MutationObserver(()=>{if(en)walk()}).observe(document.body,{childList:true,s
 let s=null;try{s=localStorage.getItem('lang')}catch{}
 set(s==='en');
 })();
+/* --- ADMIN: DALILI YA KUPAKIA NA KUPANDA JUU --- */
+(function(){const _a=admin;
+admin=async function(){main.innerHTML='<p>Inapakia...</p>';window.scrollTo({top:0,behavior:'smooth'});await _a();window.scrollTo({top:0,behavior:'smooth'})};
+})();
