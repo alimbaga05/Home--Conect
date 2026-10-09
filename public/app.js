@@ -20,7 +20,6 @@ function worker(){main.innerHTML=`<form id="f"><h3>Usajili wa mfanyakazi</h3>
 <label>Elimu</label><select name="educ"><option>Msingi</option><option>Sekondari</option><option>Chuo</option></select>${jobBoxes()}
 <label>Namba ya NIDA (tarakimu 20)</label><input name="nida" inputmode="numeric" required>
 <label>Picha yako (si lazima)</label><input name="photo" type="file" accept="image/*">
-<label>Hati safi ya Polisi (picha)</label><input name="clearance" type="file" accept="image/*" required>
 <label>Maelezo</label><textarea name="notes" rows="3"></textarea>${consent}<button class="btn">Tuma</button><div id="o"></div></form>`;
  $('#f').onsubmit=async e=>{e.preventDefault();$('#o').innerHTML='Inatuma...';
   try{await api('/api/workers',{method:'POST',body:new FormData(e.target)});e.target.reset();$('#o').innerHTML=msg('Asante! Umesajiliwa, subiri idhini ya admin.',1)}catch(x){$('#o').innerHTML=msg(x.message)}}}
