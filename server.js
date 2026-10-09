@@ -184,3 +184,8 @@ app.delete('/api/admin/:kind/:id', needAdmin, (req, res) => {
 app.use(express.static(path.join(__dirname, 'public')));
 app.use((err, req, res, next) => res.status(400).json({ code: err.code === 'LIMIT_FILE_SIZE' ? 'size' : 'bad' }));
 app.listen(process.env.PORT || 3000, () => console.log('Home Connect inafanya kazi kwenye port ' + (process.env.PORT || 3000)));
+app.get('/api/public/employers', (req, res) => {
+  const mask = t => String(t || '').replace(/\+?\d[\d\s().-]{5,}\d/g, '[namba imefichwa]');
+  const rows = db.prepare('SELECT id,name,location,jobs,need,offer,created FROM employers WHERE found=0 ORDER BY id DESC LIMIT 100').all();
+  res.json(rows.map(e => ({ id: e.id, name: e.name.split(' ')[0], location: mask(e.location), jobs: JSON.parse(e.jobs), need: mask(e.need), offer: mask(e.offer), created: e.created })));
+});
