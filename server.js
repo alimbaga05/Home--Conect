@@ -99,7 +99,6 @@ app.post('/api/workers', limit(15, 36e5), upload.fields([{ name: 'photo', maxCou
   if (!str(b.name, 80) || !str(b.phone, 20) || !str(b.origin, 80) || !(age >= 18 && age <= 70) || !(exp >= 0 && exp <= 50) || !jobs.length)
     return res.status(400).json({ error: 'Jaza taarifa zote muhimu kwa usahihi.', code: 'fields' });
   if (nida && nida.length !== 20) return res.status(400).json({ error: 'Ukiweka NIDA, iwe na tarakimu 20.', code: 'nida' });
-  if (!clr || !sniff(clr.buffer)) return res.status(400).json({ error: 'Pakia picha ya hati safi ya Polisi (JPG/PNG).', code: 'clearance' });
   if (pic && !sniff(pic.buffer)) return res.status(400).json({ error: 'Picha ya wasifu haikubaliki.', code: 'photo' });
   { const pe = pwBad(b); if (pe) return res.status(400).json({ error: pe, code: 'acct' }); }
   db.prepare(`INSERT INTO workers(name,phone,age,gender,origin,exp,educ,jobs,notes,nida,photo,clearance,created) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`)
