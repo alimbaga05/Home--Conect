@@ -116,3 +116,11 @@ set(s==='en');
 (function(){const _a=admin;
 admin=async function(){main.innerHTML='<p>Inapakia...</p>';window.scrollTo({top:0,behavior:'smooth'});await _a();window.scrollTo({top:0,behavior:'smooth'})};
 })();
+/* --- ADMIN: KUBONYEZA KUFANYE KAZI --- */
+(function(){
+document.body.style.paddingBottom='220px';
+const f=document.querySelector('footer');f.style.cssText='margin-top:30px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap';
+f.querySelectorAll('button').forEach(b=>{b.style.cssText='background:#fff;border:1px solid #1b7a5a;color:#1b7a5a;border-radius:14px;padding:14px 22px;font-size:17px'});
+const a=f.querySelector('[data-t=admin]');
+if(a)a.addEventListener('click',e=>{e.stopPropagation();admin();main.scrollIntoView({behavior:'smooth'})});
+})();
