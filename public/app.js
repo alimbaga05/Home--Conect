@@ -79,3 +79,9 @@ $('#tr').onclick=async()=>{['tw','te','tf'].forEach(i=>$('#'+i).classList.remove
   main.innerHTML=r.length?r.map(x=>`<div class="card"><b>${esc(x.name)}</b> · ${esc(x.location)}<br>${x.jobs.map(esc).join(', ')}<p>${esc(x.need)}</p>${x.offer?`<small>Mshahara: ${esc(x.offer)}</small><br>`:''}<a class="btn" target="_blank" rel="noopener" href="https://wa.me/${w}?text=${encodeURIComponent('Nina nia na ombi la mwajiri namba '+x.id)}">Nina nia</a></div>`).join(''):'<p>Hakuna maombi kwa sasa.</p>';
  }catch(e){main.innerHTML=msg(e.message)}main.scrollIntoView({behavior:'smooth'})};
 })();
+/* --- IDHINI YA MAOMBI YA WAAJIRI (admin) --- */
+(function(){const _p=panel;
+panel=function(d){_p(d);
+ document.querySelectorAll('[data-a=d][data-k=employers]').forEach(b=>{const e=d.employers.find(x=>x.id==b.dataset.id);if(!e)return;
+  b.insertAdjacentHTML('beforebegin',`<button class="btn" data-a="p" data-k="employers" data-id="${e.id}" data-f="approved" data-v="${e.approved?0:1}">${e.approved?'Ondoa idhini':'Idhinisha'}</button>`)})};
+})();
