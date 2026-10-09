@@ -85,3 +85,30 @@ panel=function(d){_p(d);
  document.querySelectorAll('[data-a=d][data-k=employers]').forEach(b=>{const e=d.employers.find(x=>x.id==b.dataset.id);if(!e)return;
   b.insertAdjacentHTML('beforebegin',`<button class="btn" data-a="p" data-k="employers" data-id="${e.id}" data-f="approved" data-v="${e.approved?0:1}">${e.approved?'Ondoa idhini':'Idhinisha'}</button>`)})};
 })();
+/* --- ENGLISH / KISWAHILI --- */
+(function(){
+const D={'Pata msaidizi wa ndani unayemwamini, kwa haraka na usalama':'Find a trusted house helper, quickly and safely','Natafuta kazi':"I'm looking for work",'Nahitaji msaidizi':'I need a helper','Wafanyakazi':'Workers','Wanakaguliwa':'Verified','1. Jisajili':'1. Register','2. Admin anakagua':'2. Admin verifies','3. Mkataba na kuunganishwa':'3. Contract and connection','Wafanyakazi walio tayari':'Available workers','Maombi ya waajiri':'Employer requests','Ingia':'Log in','Toka':'Log out','📞 Piga simu':'📞 Call',
+'Usajili wa mfanyakazi':'Worker registration','Ombi la mwajiri':'Employer request','Jina kamili':'Full name','Simu':'Phone','Umri':'Age','Jinsia':'Gender','Mwanamke':'Female','Mwanaume':'Male','Mahali ulipotoka':'Place of origin','Uzoefu (miaka)':'Experience (years)','Elimu':'Education','Msingi':'Primary','Sekondari':'Secondary','Chuo':'College','Kazi':'Jobs',
+'Kulea watoto':'Childcare','Kupika':'Cooking','Usafi':'Cleaning','Kufua':'Laundry','Kuhudumia wazee':'Elderly care','Mlinzi':'Security guard','Bustani':'Gardening',
+'Namba ya NIDA (si lazima)':'NIDA number (optional)','Namba ya NIDA (tarakimu 20)':'NIDA number (20 digits)','Namba ya NIDA (si lazima, tarakimu 20)':'NIDA number (optional, 20 digits)','Picha yako (si lazima)':'Your photo (optional)','Picha yako (si lazima, ila inasaidia kupata kazi)':'Your photo (optional, but it helps you get work)','Hati safi ya Polisi (picha)':'Police clearance certificate (photo)','Maelezo':'Notes',
+'Nakubali taarifa zangu zitumike':'I agree to my information being used','Tuma':'Submit','Nywila ya akaunti (angalau herufi 6)':'Account password (at least 6 characters)','Mahali unapoishi':'Where you live','Unahitaji nini?':'What do you need?','Mshahara unaotoa':'Salary offered','Namba ya simu':'Phone number','Nywila':'Password','Inapakia...':'Loading...','Inatuma...':'Sending...','Hakuna wafanyakazi bado.':'No workers yet.','Hakuna maombi kwa sasa.':'No requests right now.','Nina nia':"I'm interested",
+'Idhinisha':'Approve','Ondoa idhini':'Remove approval','Amepatikana':'Found','Rudisha':'Restore','Futa':'Delete','Hati':'Document','Nywila (admin)':'Password',
+'Asante! Umesajiliwa, subiri idhini ya admin.':'Thank you! You are registered, please wait for admin approval.','Asante! Ombi lako limepokelewa.':'Thank you! Your request has been received.',
+'Kubali matumizi ya taarifa zako.':'Please accept the use of your information.','Jaza taarifa zote muhimu kwa usahihi.':'Fill in all required details correctly.','Jaza taarifa zote muhimu.':'Fill in all required details.','Pakia picha ya hati safi ya Polisi (JPG/PNG).':'Upload a photo of your police clearance (JPG/PNG).','Picha ya wasifu haikubaliki.':'The profile photo is not accepted.','Namba hii imeshasajiliwa. Tafadhali ingia.':'This number is already registered. Please log in.','Nywila iwe na angalau herufi 6.':'Password must be at least 6 characters.','Namba ya simu si sahihi.':'Phone number is not valid.','Namba au nywila si sahihi':'Wrong number or password','Umejaribu mara nyingi. Subiri kidogo.':'Too many attempts. Please wait a moment.','Ukiweka NIDA, iwe na tarakimu 20.':'If you enter NIDA, it must have 20 digits.','Hitilafu imetokea':'An error occurred'};
+const R=[[/miaka (\d+)/g,'$1 yrs'],[/uzoefu/g,'experience'],[/Karibu, /g,'Welcome, '],[/Mshahara:/g,'Salary:'],[/Umeidhinishwa, unaonekana kwenye orodha\./g,'You are approved and listed.'],[/Unasubiri idhini ya admin\./g,'Waiting for admin approval.']];
+const tr=s=>{const t=s.trim();if(D[t])return s.replace(t,D[t]);let o=s;R.forEach(([a,b])=>{o=o.replace(a,b)});return o};
+const nodes=new Map();let en=false;
+const walk=()=>{const w=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT);let x;
+ while(x=w.nextNode()){const p=x.parentNode;if(!p||['SCRIPT','STYLE'].includes(p.tagName)||p.id==='lang')continue;
+  if(p.tagName==='OPTION'&&!p.hasAttribute('value'))p.setAttribute('value',x.data.trim());
+  if(!nodes.has(x)){const t=tr(x.data);if(t!==x.data){nodes.set(x,x.data);x.data=t}}}};
+const btn=document.createElement('button');btn.id='lang';
+btn.style.cssText='position:absolute;top:14px;right:12px;z-index:50;background:#ffffff33;color:#fff;border:0;border-radius:20px;padding:8px 14px;font-size:15px';
+document.body.appendChild(btn);
+const set=v=>{en=v;btn.textContent=v?'Kiswahili':'English';try{localStorage.setItem('lang',v?'en':'sw')}catch{}
+ if(v)walk();else{nodes.forEach((o,x)=>{if(x.isConnected)x.data=o});nodes.clear()}};
+btn.onclick=()=>set(!en);
+new MutationObserver(()=>{if(en)walk()}).observe(document.body,{childList:true,subtree:true});
+let s=null;try{s=localStorage.getItem('lang')}catch{}
+set(s==='en');
+})();
