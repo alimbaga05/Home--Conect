@@ -67,7 +67,7 @@ function notifyAdmin(text) {
 }
 
 db.exec(`CREATE TABLE IF NOT EXISTS accounts(id INTEGER PRIMARY KEY AUTOINCREMENT, phone TEXT UNIQUE, role TEXT, ref INTEGER, salt TEXT, hash TEXT);`);
-const normPhone = p => String(p || '').replace(/\D/g, '');
+const normPhone = p => { const d = String(p || '').replace(/\D/g, ''); return d.length === 10 && d[0] === '0' ? '255' + d.slice(1) : d; };
 const hashPw = (pw, salt) => crypto.scryptSync(pw, salt, 32).toString('hex');
 const pwBad = b => { if (normPhone(b.phone).length < 9) return 'Namba ya simu si sahihi.';
   if (String(b.password || '').length < 6) return 'Nywila iwe na angalau herufi 6.';
