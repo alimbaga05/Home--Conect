@@ -189,3 +189,5 @@ app.get('/api/public/employers', (req, res) => {
   const rows = db.prepare('SELECT id,name,location,jobs,need,offer,created FROM employers WHERE approved=1 AND found=0 ORDER BY id DESC LIMIT 100').all();
   res.json(rows.map(e => ({ id: e.id, name: e.name.split(' ')[0], location: mask(e.location), jobs: JSON.parse(e.jobs), need: mask(e.need), offer: mask(e.offer), created: e.created })));
 });
+try { db.exec('ALTER TABLE employers ADD COLUMN approved INTEGER DEFAULT 0'); } catch {}
+FIELDS.employers.push('approved');
