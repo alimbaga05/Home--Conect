@@ -1,4 +1,4 @@
-const JOBS=['Kulea watoto','Kupika','Usafi','Kufua','Kuhudumia wazee','Mlinzi','Bustani'];
+const JOBS=['Kulea watoto','Kupika','Usafi','Kufua','Kuhudumia wazee','Mlinzi','Bustani','Kuuza dukani','Mhudumu wa duka','Mpishi wa mgahawa','Mhudumu wa hoteli','Dereva'];
 const WA='255685573088';/* weka namba yako ya WhatsApp hapa, mfano 2557XXXXXXXX */
 const $=s=>document.querySelector(s),main=$('#main');$('#wa').href='https://wa.me/'+WA;
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
