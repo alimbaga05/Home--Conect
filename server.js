@@ -15,6 +15,9 @@ fs.mkdirSync(FILES, { recursive: true });
 
 // ---- Database: Neon (Postgres) ----
 const pool = new Pool({ connectionString: DATABASE_URL.replace('&channel_binding=require', '') });
+pool.on('error', e => console.error('Pool:', e.message));
+process.on('unhandledRejection', e => console.error('Rejection:', e));
+process.on('uncaughtException', e => console.error('Exception:', e));
 const q = (sql, p = []) => { let i = 0;
   return pool.query(sql.replace(/\?/g, () => '$' + (++i)), p).then(r => r.rows); };
 const db = { prepare: sql => ({
