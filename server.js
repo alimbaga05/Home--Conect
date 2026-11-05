@@ -128,3 +128,6 @@ app.get('/api/photo/:id', ah(async (req, res) => {
   res.type(EXT[path.extname(w.photo)] || 'image/jpeg').set('Cache-Control', 'private, max-age=300')
     .send(fs.readFileSync(path.join(FILES, path.basename(w.photo))));
 }));
+app.use(express.static(path.join(__dirname, 'public')));
+app.use((err, req, res, next) => { console.error(err.message); res.status(400).json({ code: err.code === 'LIMIT_FILE_SIZE' ? 'size' : 'bad' }); });
+app.listen(process.env.PORT || 3000, () => console.log('Home Connect inafanya kazi kwenye port ' + (process.env.PORT || 3000)));
