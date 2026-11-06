@@ -172,6 +172,61 @@ app.delete('/api/admin/workers/:id', needAdmin, ah(async (req, res) => {
 app.delete('/api/admin/employers/:id', needAdmin, ah(async (req, res) => {
   await db.prepare('DELETE FROM employers WHERE id=?').run(+req.params.id);
   res.json({ ok: true }); }));
+// ---- Nywila, akaunti na Admin ----
+pool.query(`ALTER TABLE workers ADD COLUMN IF NOT EXISTS pass TEXT;
+ALTER TABLE employers ADD COLUMN IF NOT EXISTS pass TEXT;
+ALTER TABLE employers ADD COLUMN IF NOT EXISTS approved INTEGER DEFAULT 0;`)
+  .catch(e => console.error('Migrate:', e.message));
+const hash = p => { const s = crypto.randomBytes(16).toString('hex');
+  return s + ':' + crypto.scryptSync(p, s, 32).toString('hex'); };
+const check = (p, h) => { const [s, k] = String(h || '').split(':'); if (!s || !k) return false;
+  return crypto.timingSafeEqual(crypto.scryptSync(p, s, 32), Buffer.from(k, 'hex')); };
+const same = (a, b) => crypto.timingSafeEqual(Buffer.from(sign(String(a)), 'hex'), Buffer.from(sign(String(b)), 'hex'));
+const cookie = (n, v, age) => `${n}=${v}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${age}` + (process.env.NODE_ENV === 'production' ? '; Secure' : '');
+const hexOk = s => /^[0-9a-f]{64}$/.test(s || '');
+
+// Admin
+app.post('/api/admin/login', limit(10, 9e5), (req, res) => {
+  if (!same(req.body.password || '', ADMIN_PASSWORD))
+    return res.status(401).json({ error: 'Namba au nywila si sahihi', code: 'login' });
+  const exp = String(Date.now() + 12 * 36e5);
+  res.set('Set-Cookie', cookie('adm', exp + '.' + sign(exp), 43200)); res.json({ ok: true }); });
+app.post('/api/admin/logout', (req, res) => { res.set('Set-Cookie', cookie('adm', '', 0)); res.json({ ok: true }); });
+const parse = r => ({ ...r, jobs: JSON.parse(r.jobs || '[]'), nida: decText(r.nida) });
+app.get('/api/admin/data', needAdmin, ah(async (req, res) => {
+  res.json({
+    workers: (await db.prepare('SELECT id,name,phone,age,gender,origin,exp,educ,jobs,notes,nida,photo,clearance,approved,found FROM workers ORDER BY id DESC').all()).map(parse),
+    employers: (await db.prepare('SELECT id,name,phone,location,nida,jobs,need,offer,approved,found FROM employers ORDER BY id DESC').all()).map(parse) }); }));
+const TBL = { workers: 'workers', employers: 'employers' }, FLD = { approved: 'approved', found: 'found' };
+app.patch('/api/admin/:k/:id', needAdmin, ah(async (req, res) => {
+  const t = TBL[req.params.k], f = FLD[req.body.field]; if (!t || !f) return res.sendStatus(400);
+  await db.prepare(`UPDATE ${t} SET ${f}=? WHERE id=?`).run(req.body.value ? 1 : 0, +req.params.id); res.json({ ok: true }); }));
+app.delete('/api/admin/:k/:id', needAdmin, ah(async (req, res) => {
+  const t = TBL[req.params.k]; if (!t) return res.sendStatus(400);
+  if (t === 'workers') { const w = await db.prepare('SELECT photo FROM workers WHERE id=?').get(+req.params.id); if (w) rm(w.photo); }
+  await db.prepare(`DELETE FROM ${t} WHERE id=?`).run(+req.params.id); res.json({ ok: true }); }));
+
+// Maombi ya waajiri (umma, bila simu)
+app.get('/api/public/employers', ah(async (req, res) => {
+  const rows = await db.prepare('SELECT id,name,location,jobs,need,offer FROM employers WHERE approved=1 AND found=0 ORDER BY id DESC').all();
+  res.json(rows.map(e => ({ ...e, jobs: JSON.parse(e.jobs || '[]') }))); }));
+
+// Akaunti za wafanyakazi na waajiri
+const userOf = req => { const [v, s] = (cookies(req).usr || '').split('.');
+  if (!v || !hexOk(s) || !crypto.timingSafeEqual(Buffer.from(s), Buffer.from(sign(v)))) return null;
+  const [role, id, exp] = v.split('-'); return Number(exp) > Date.now() ? { role, id: +id } : null; };
+app.post('/api/login', limit(10, 9e5), ah(async (req, res) => {
+  const ph = str(req.body.phone, 20), pw = String(req.body.password || '');
+  let role = 'worker', u = await db.prepare('SELECT id,pass FROM workers WHERE phone=?').get(ph);
+  if (!u) { role = 'employer'; u = await db.prepare('SELECT id,pass FROM employers WHERE phone=?').get(ph); }
+  if (!u || !check(pw, u.pass)) return res.status(401).json({ error: 'Namba au nywila si sahihi', code: 'login' });
+  const v = `${role}-${u.id}-${Date.now() + 30 * 864e5}`;
+  res.set('Set-Cookie', cookie('usr', v + '.' + sign(v), 2592000)); res.json({ ok: true }); }));
+app.post('/api/logout', (req, res) => { res.set('Set-Cookie', cookie('usr', '', 0)); res.json({ ok: true }); });
+app.get('/api/me', ah(async (req, res) => {
+  const u = userOf(req); if (!u) return res.sendStatus(401);
+  const r = await db.prepare(`SELECT name,phone,approved,found FROM ${u.role === 'worker' ? 'workers' : 'employers'} WHERE id=?`).get(u.id);
+  if (!r) return res.sendStatus(401); res.json({ ...r, role: u.role }); }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use((err, req, res, next) => { console.error(err.message); res.status(400).json({ code: err.code === 'LIMIT_FILE_SIZE' ? 'size' : 'bad' }); });
 app.listen(process.env.PORT || 3000, () => console.log('Home Connect inafanya kazi kwenye port ' + (process.env.PORT || 3000)));
