@@ -128,6 +128,50 @@ app.get('/api/photo/:id', ah(async (req, res) => {
   res.type(EXT[path.extname(w.photo)] || 'image/jpeg').set('Cache-Control', 'private, max-age=300')
     .send(fs.readFileSync(path.join(FILES, path.basename(w.photo))));
 }));
+// ---- Admin ----
+const ADMIN_PHONE = (process.env.ADMIN_PHONE || '').replace(/\D/g, '');
+const same = (a, b) => crypto.timingSafeEqual(Buffer.from(sign(String(a))), Buffer.from(sign(String(b))));
+
+app.post('/api/admin/login', limit(10, 9e5), (req, res) => {
+  const phone = str(req.body.phone, 20).replace(/\D/g, '');
+  const pw = String(req.body.password || '');
+  const okPw = same(pw, ADMIN_PASSWORD);
+  const okPhone = !ADMIN_PHONE || same(phone, ADMIN_PHONE);
+  if (!okPw || !okPhone) return res.status(401).json({ error: 'Namba au password si sahihi', code: 'login' });
+  const exp = String(Date.now() + 12 * 36e5);
+  res.set('Set-Cookie', `adm=${exp}.${sign(exp)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=43200` +
+    (process.env.NODE_ENV === 'production' ? '; Secure' : ''));
+  res.json({ ok: true });
+});
+app.post('/api/admin/logout', (req, res) => {
+  res.set('Set-Cookie', 'adm=; HttpOnly; Path=/; Max-Age=0'); res.json({ ok: true }); });
+app.get('/api/admin/me', (req, res) => res.json({ admin: isAdmin(req) }));
+
+app.get('/api/admin/workers', needAdmin, ah(async (req, res) => {
+  const rows = await db.prepare('SELECT * FROM workers ORDER BY id DESC').all();
+  res.json(rows.map(w => ({ ...w, jobs: JSON.parse(w.jobs || '[]'), nida: decText(w.nida), photo: !!w.photo })));
+}));
+app.get('/api/admin/employers', needAdmin, ah(async (req, res) => {
+  const rows = await db.prepare('SELECT * FROM employers ORDER BY id DESC').all();
+  res.json(rows.map(e => ({ ...e, jobs: JSON.parse(e.jobs || '[]'), nida: decText(e.nida) })));
+}));
+app.post('/api/admin/workers/:id/approve', needAdmin, ah(async (req, res) => {
+  await db.prepare('UPDATE workers SET approved=? WHERE id=?').run(req.body.approved ? 1 : 0, +req.params.id);
+  res.json({ ok: true }); }));
+app.post('/api/admin/workers/:id/found', needAdmin, ah(async (req, res) => {
+  await db.prepare('UPDATE workers SET found=? WHERE id=?').run(req.body.found ? 1 : 0, +req.params.id);
+  res.json({ ok: true }); }));
+app.post('/api/admin/employers/:id/found', needAdmin, ah(async (req, res) => {
+  await db.prepare('UPDATE employers SET found=? WHERE id=?').run(req.body.found ? 1 : 0, +req.params.id);
+  res.json({ ok: true }); }));
+app.delete('/api/admin/workers/:id', needAdmin, ah(async (req, res) => {
+  const w = await db.prepare('SELECT photo FROM workers WHERE id=?').get(+req.params.id);
+  if (w) rm(w.photo);
+  await db.prepare('DELETE FROM workers WHERE id=?').run(+req.params.id);
+  res.json({ ok: true }); }));
+app.delete('/api/admin/employers/:id', needAdmin, ah(async (req, res) => {
+  await db.prepare('DELETE FROM employers WHERE id=?').run(+req.params.id);
+  res.json({ ok: true }); }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use((err, req, res, next) => { console.error(err.message); res.status(400).json({ code: err.code === 'LIMIT_FILE_SIZE' ? 'size' : 'bad' }); });
 app.listen(process.env.PORT || 3000, () => console.log('Home Connect inafanya kazi kwenye port ' + (process.env.PORT || 3000)));
