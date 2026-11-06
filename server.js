@@ -101,21 +101,30 @@ app.post('/api/workers', limit(15, 36e5), upload.fields([{ name: 'photo', maxCou
     return res.status(400).json({ error: 'Jaza taarifa zote muhimu kwa usahihi.', code: 'fields' });
   if (nida && nida.length !== 20) return res.status(400).json({ error: 'Namba ya NIDA lazima iwe na tarakimu 20.', code: 'nida' });
   if (pic && !sniff(pic.buffer)) return res.status(400).json({ error: 'Picha ya wasifu haikubaliki.', code: 'photo' });
+   const pw = String(b.password || '');
+  if (pw.length < 6) return res.status(400).json({ error: 'Nywila iwe na angalau herufi 6.', code: 'pw' });
+  if (await db.prepare('SELECT id FROM workers WHERE phone=?').get(str(b.phone, 20)) || await db.prepare('SELECT id FROM employers WHERE phone=?').get(str(b.phone, 20)))
+    return res.status(400).json({ error: 'Namba hii imeshasajiliwa. Tafadhali ingia.', code: 'dup' }); 
   await db.prepare(`INSERT INTO workers(name,phone,age,gender,origin,exp,educ,jobs,notes,nida,photo,clearance,created) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`)
     .run(str(b.name, 80), str(b.phone, 20), age, str(b.gender, 12), str(b.origin, 80), exp, str(b.educ, 40), JSON.stringify(jobs),
       str(b.notes, 500), encText(nida), pic ? save(pic.buffer, false) : null, null, new Date().toISOString());
+    await db.prepare('UPDATE workers SET pass=? WHERE phone=?').run(hash(pw), str(b.phone, 20));
   notifyAdmin(`Mfanyakazi mpya: ${str(b.name, 80)}, simu ${str(b.phone, 20)}. Fungua Admin kuidhinisha.`);
   res.json({ ok: true });
 }));
 app.post('/api/employers', limit(15, 36e5), ah(async (req, res) => {
   const b = req.body, nida = str(b.nida, 40).replace(/\D/g, '');
+  const phone = str(b.phone, 20), pw = String(b.password || '');
   if (b.consent !== 'on') return res.status(400).json({ error: 'Kubali matumizi ya taarifa zako.', code: 'consent' });
-  if (!str(b.name, 80) || !str(b.phone, 20) || !str(b.location, 120) || !str(b.need, 800))
+  if (!str(b.name, 80) || !phone || !str(b.location, 120) || !str(b.need, 800))
     return res.status(400).json({ error: 'Jaza taarifa zote muhimu.', code: 'fields' });
   if (nida && nida.length !== 20) return res.status(400).json({ error: 'Namba ya NIDA lazima iwe na tarakimu 20.', code: 'nida' });
-  await db.prepare(`INSERT INTO employers(name,phone,location,nida,jobs,need,offer,created) VALUES(?,?,?,?,?,?,?,?)`)
-    .run(str(b.name, 80), str(b.phone, 20), str(b.location, 120), encText(nida), JSON.stringify(jobsOf(b.jobs)), str(b.need, 800), str(b.offer, 12), new Date().toISOString());
-  notifyAdmin(`Ombi jipya la mwajiri: ${str(b.name, 80)}, simu ${str(b.phone, 20)}, ${str(b.location, 60)}.`);
+  if (pw.length < 6) return res.status(400).json({ error: 'Nywila iwe na angalau herufi 6.', code: 'pw' });
+  if (await db.prepare('SELECT id FROM workers WHERE phone=?').get(phone) || await db.prepare('SELECT id FROM employers WHERE phone=?').get(phone))
+    return res.status(400).json({ error: 'Namba hii imeshasajiliwa. Tafadhali ingia.', code: 'dup' });
+  await db.prepare(`INSERT INTO employers(name,phone,location,nida,jobs,need,offer,pass,created) VALUES(?,?,?,?,?,?,?,?,?)`)
+    .run(str(b.name, 80), phone, str(b.location, 120), encText(nida), JSON.stringify(jobsOf(b.jobs)), str(b.need, 800), str(b.offer, 12), hash(pw), new Date().toISOString());
+  notifyAdmin(`Ombi jipya la mwajiri: ${str(b.name, 80)}, simu ${phone}, ${str(b.location, 60)}.`);
   res.json({ ok: true });
 }));
 app.get('/api/public/workers', ah(async (req, res) => {
